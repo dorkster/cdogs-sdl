@@ -36,6 +36,9 @@
 #include "net_server.h"
 #include "sounds.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
 
 GameLoopData GameLoopDataNew(
 	void *updateData, GameLoopResult (*updateFunc)(void *),
@@ -51,6 +54,61 @@ GameLoopData GameLoopDataNew(
 	return g;
 }
 
+#ifdef __EMSCRIPTEN__
+void GameLoop(GameLoopData *data)
+{
+	EventReset(
+		&gEventHandlers,
+		gEventHandlers.mouse.cursor, gEventHandlers.mouse.trail);
+	GameLoopResult result = UPDATE_RESULT_OK;
+	Uint32 ticksNow = SDL_GetTicks();
+
+    // Input
+    if ((data->Frames & 1) || !data->InputEverySecondFrame)
+    {
+        EventPoll(&gEventHandlers, ticksNow);
+        if (data->InputFunc)
+        {
+            data->InputFunc(data->InputData);
+        }
+    }
+
+    NetClientPoll(&gNetClient);
+    NetServerPoll(&gNetServer);
+
+    // Update
+    result = data->UpdateFunc(data->UpdateData);
+    NetServerFlush(&gNetServer);
+    NetClientFlush(&gNetClient);
+    bool draw = !data->HasDrawnFirst;
+    switch (result)
+    {
+    case UPDATE_RESULT_OK:
+        // Do nothing
+        break;
+    case UPDATE_RESULT_DRAW:
+        draw = true;
+        break;
+    case UPDATE_RESULT_EXIT:
+        // Will exit
+        break;
+    default:
+        CASSERT(false, "Unknown loop result");
+        break;
+    }
+
+    // Draw
+    if (draw)
+    {
+        if (data->DrawFunc)
+        {
+            data->DrawFunc(data->DrawData);
+        }
+        BlitFlip(&gGraphicsDevice);
+        data->HasDrawnFirst = true;
+    }
+}
+#else
 void GameLoop(GameLoopData *data)
 {
 	EventReset(
@@ -61,6 +119,7 @@ void GameLoop(GameLoopData *data)
 	Uint32 ticksElapsed = 0;
 	int framesSkipped = 0;
 	const int maxFrameskip = data->FPS / 5;
+
 	for (; result != UPDATE_RESULT_EXIT; )
 	{
 		// Frame rate control
@@ -136,3 +195,4 @@ void GameLoop(GameLoopData *data)
 		}
 	}
 }
+#endif //__EMSCRIPTEN__

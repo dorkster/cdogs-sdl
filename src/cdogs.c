@@ -96,11 +96,54 @@
 #include "prep.h"
 #include "screens.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+struct context {
+    GameMode lastGameMode;
+    bool wasClient;
+    credits_displayer_t *creditsDisplayer;
+    custom_campaigns_t *campaigns;
+};
+
+void EmscriptenMainLoop(void *arg)
+{
+    struct context *ctx = arg;
+
+    GrafxMakeRandomBackground(
+        &gGraphicsDevice, &gCampaign, &gMission, &gMap);
+    if (!gCampaign.IsLoaded)
+    {
+        MainMenu(
+            &gGraphicsDevice, ctx->creditsDisplayer, ctx->campaigns,
+            ctx->lastGameMode, ctx->wasClient);
+    }
+    if (gCampaign.IsLoaded)
+    {
+        ctx->lastGameMode = gCampaign.Entry.Mode;
+        ctx->wasClient = gCampaign.IsClient;
+        ScreenStart();
+        CampaignSettingTerminate(&gCampaign.Setting);
+    }
+}
+#endif
 
 void MainLoop(credits_displayer_t *creditsDisplayer, custom_campaigns_t *campaigns)
 {
 	GameMode lastGameMode = GAME_MODE_QUICK_PLAY;
 	bool wasClient = false;
+
+#ifdef __EMSCRIPTEN__
+    struct context ctx;
+    ctx.lastGameMode = lastGameMode;
+    ctx.wasClient = wasClient;
+    ctx.creditsDisplayer = creditsDisplayer;
+    ctx.campaigns = campaigns;
+
+    // TODO use GameLoopData->FPS instead of 60?
+    emscripten_set_main_loop_arg(EmscriptenMainLoop, &ctx, 60, 1);
+    return;
+#endif
+
 	for (;;)
 	{
 		GrafxMakeRandomBackground(
@@ -165,6 +208,7 @@ int main(int argc, char *argv[])
 	AutosaveInit(&gAutosave);
 	AutosaveLoad(&gAutosave, GetConfigFilePath(AUTOSAVE_FILE));
 
+#ifndef __EMSCRIPTEN__
 	if (enet_initialize() != 0)
 	{
 		LOG(LM_MAIN, LL_ERROR, "An error occurred while initializing ENet.");
@@ -172,6 +216,7 @@ int main(int argc, char *argv[])
 		goto bail;
 	}
 	NetClientInit(&gNetClient);
+#endif
 
 	// Print command line
 	char buf[CDOGS_PATH_MAX];
@@ -183,9 +228,13 @@ int main(int argc, char *argv[])
 	}
 
 	debug(D_NORMAL, "Initialising SDL...\n");
+#ifndef __EMSCRIPTEN__
 	const int sdlFlags =
 		SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_HAPTIC |
 		SDL_INIT_GAMECONTROLLER;
+#else
+    const int sdlFlags = SDL_INIT_TIMER | SDL_INIT_AUDIO | SDL_INIT_VIDEO;
+#endif
 	if (SDL_Init(sdlFlags) != 0)
 	{
 		LOG(LM_MAIN, LL_ERROR, "Could not initialise SDL: %s", SDL_GetError());
@@ -205,6 +254,7 @@ int main(int argc, char *argv[])
 	LOG(LM_MAIN, LL_INFO, "data dir(%s)", buf);
 	LOG(LM_MAIN, LL_INFO, "config dir(%s)", GetConfigFilePath(""));
 
+#ifndef __EMSCRIPTEN__
 	SoundInitialize(&gSoundDevice, "sounds");
 	if (!gSoundDevice.isInitialised)
 	{
@@ -217,6 +267,7 @@ int main(int argc, char *argv[])
 	LoadSongs();
 
 	MusicPlayMenu(&gSoundDevice);
+#endif
 
 	EventInit(&gEventHandlers, NULL, NULL, true);
 	NetServerInit(&gNetServer);

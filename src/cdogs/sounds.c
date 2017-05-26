@@ -374,10 +374,12 @@ static void SoundPlayAtPosition(
 	Mix_SetPosition(channel, (Sint16)bearing, (Uint8)distance);
 	if (isMuffled)
 	{
+#ifndef __EMSCRIPTEN__
 		if (!Mix_RegisterEffect(channel, MuffleEffect, NULL, NULL))
 		{
 			fprintf(stderr, "Mix_RegisterEffect: %s\n", Mix_GetError());
 		}
+#endif
 	}
 }
 
