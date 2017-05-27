@@ -104,20 +104,28 @@ void EmscriptenMainLoop(void *arg)
 {
     struct emscripten_context_t *ctx = arg;
 
-    GrafxMakeRandomBackground(
-        &gGraphicsDevice, &gCampaign, &gMission, &gMap);
-    if (!gCampaign.IsLoaded)
-    {
-        MainMenu(
-            &gGraphicsDevice, ctx->creditsDisplayer, ctx->campaigns,
-            ctx->lastGameMode, ctx->wasClient);
+    if (EmscriptenScreenState == EMSCRIPTEN_SCREEN_STATE_NONE) {
+        GrafxMakeRandomBackground(
+            &gGraphicsDevice, &gCampaign, &gMission, &gMap);
+        if (!gCampaign.IsLoaded)
+        {
+            MainMenu(
+                &gGraphicsDevice, ctx->creditsDisplayer, ctx->campaigns,
+                ctx->lastGameMode, ctx->wasClient);
+        }
     }
     if (gCampaign.IsLoaded)
     {
-        ctx->lastGameMode = gCampaign.Entry.Mode;
-        ctx->wasClient = gCampaign.IsClient;
+        if (EmscriptenScreenState == EMSCRIPTEN_SCREEN_STATE_NONE)
+        {
+            ctx->lastGameMode = gCampaign.Entry.Mode;
+            ctx->wasClient = gCampaign.IsClient;
+        }
         ScreenStart();
-        CampaignSettingTerminate(&gCampaign.Setting);
+        if (EmscriptenScreenState == EMSCRIPTEN_SCREEN_STATE_DONE)
+        {
+            CampaignSettingTerminate(&gCampaign.Setting);
+        }
     }
 }
 #endif
@@ -132,6 +140,8 @@ void MainLoop(credits_displayer_t *creditsDisplayer, custom_campaigns_t *campaig
     EmscriptenContext.wasClient = wasClient;
     EmscriptenContext.creditsDisplayer = creditsDisplayer;
     EmscriptenContext.campaigns = campaigns;
+
+    EmscriptenScreenState = EMSCRIPTEN_SCREEN_STATE_NONE;
 
     // TODO use GameLoopData->FPS instead of 30?
     emscripten_set_main_loop_arg(EmscriptenMainLoop, &EmscriptenContext, 30, 1);

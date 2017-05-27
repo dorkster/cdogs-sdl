@@ -255,7 +255,9 @@ bool RunGame(const CampaignOptions *co, struct MissionOptions *m, Map *map)
 	data.loop.InputFunc = RunGameInput;
 	data.loop.FPS = ConfigGetInt(&gConfig, "Game.FPS");
 	data.loop.InputEverySecondFrame = true;
+    printf("begin game loop\n");
 	GameLoop(&data.loop);
+    printf("end game loop\n");
 	LOG(LM_MAIN, LL_INFO, "Game finished");
 
 	// Flush events

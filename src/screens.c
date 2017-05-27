@@ -66,17 +66,58 @@
 #include "prep.h"
 #include "screens_end.h"
 
+#ifdef __EMSCRIPTEN__
+#include "emscripten_loop.h"
+#endif
 
 static void Campaign(GraphicsDevice *graphics, CampaignOptions *co);
 
 void ScreenStart(void)
 {
+#ifdef __EMSCRIPTEN__
+    switch (EmscriptenScreenState) {
+        case EMSCRIPTEN_SCREEN_STATE_NONE:
+            goto state_none;
+            break;
+        case EMSCRIPTEN_SCREEN_STATE_INTRO:
+            goto state_intro;
+            break;
+        case EMSCRIPTEN_SCREEN_STATE_PLAYER_NUM:
+            goto state_player_num;
+            break;
+        case EMSCRIPTEN_SCREEN_STATE_PLAYER_SELECT:
+            goto state_player_select;
+            break;
+        case EMSCRIPTEN_SCREEN_STATE_CAMPAIGN:
+            goto state_campaign;
+            break;
+        case EMSCRIPTEN_SCREEN_STATE_DONE:
+            goto state_done;
+            break;
+        default:
+            goto state_none;
+            break;
+    }
+#endif
+
+#ifdef __EMSCRIPTEN__
+state_none:
+    printf("state_none\n");
+    EmscriptenScreenState = EMSCRIPTEN_SCREEN_STATE_INTRO;
+#endif
+
 	// Reset player datas
 	PlayerDataTerminate(&gPlayerDatas);
 	PlayerDataInit(&gPlayerDatas);
 
 	// Initialise game events; we need this for init as well as the game
 	GameEventsInit(&gGameEvents);
+
+#ifdef __EMSCRIPTEN__
+state_intro:
+    printf("state_intro\n");
+    EmscriptenScreenState = EMSCRIPTEN_SCREEN_STATE_PLAYER_NUM;
+#endif
 
 	debug(D_NORMAL, ">> Entering campaign\n");
 	if (IsIntroNeeded(gCampaign.Entry.Mode))
@@ -88,12 +129,24 @@ void ScreenStart(void)
 		}
 	}
 
+#ifdef __EMSCRIPTEN__
+state_player_num:
+    printf("state_player_num\n");
+    EmscriptenScreenState = EMSCRIPTEN_SCREEN_STATE_PLAYER_SELECT;
+#endif
+
 	debug(D_NORMAL, ">> Select number of players\n");
 	if (!NumPlayersSelection(&gGraphicsDevice, &gEventHandlers))
 	{
 		gCampaign.IsLoaded = false;
 		goto bail;
 	}
+
+#ifdef __EMSCRIPTEN__
+state_player_select:
+    printf("state_player_select\n");
+    EmscriptenScreenState = EMSCRIPTEN_SCREEN_STATE_CAMPAIGN;
+#endif
 
 	debug(D_NORMAL, ">> Entering selection\n");
 	if (GetNumPlayers(PLAYER_ANY, false, true) > 0 && !PlayerSelection())
@@ -102,8 +155,19 @@ void ScreenStart(void)
 		goto bail;
 	}
 
+#ifdef __EMSCRIPTEN__
+state_campaign:
+    printf("state_campaign\n");
+    EmscriptenScreenState = EMSCRIPTEN_SCREEN_STATE_DONE;
+#endif
 	debug(D_NORMAL, ">> Starting campaign\n");
 	Campaign(&gGraphicsDevice, &gCampaign);
+
+#ifdef __EMSCRIPTEN__
+state_done:
+    printf("state_done\n");
+    EmscriptenScreenState = EMSCRIPTEN_SCREEN_STATE_NONE;
+#endif
 	CampaignUnload(&gCampaign);
 	
 bail:

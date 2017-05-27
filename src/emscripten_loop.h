@@ -61,8 +61,19 @@ struct emscripten_context_t {
     custom_campaigns_t *campaigns;
 };
 
+enum EMSCRIPTEN_SCREEN_STATE {
+    EMSCRIPTEN_SCREEN_STATE_NONE = 0,
+    EMSCRIPTEN_SCREEN_STATE_INTRO = 1,
+    EMSCRIPTEN_SCREEN_STATE_PLAYER_NUM = 2,
+    EMSCRIPTEN_SCREEN_STATE_PLAYER_SELECT = 3,
+    EMSCRIPTEN_SCREEN_STATE_CAMPAIGN = 4,
+    EMSCRIPTEN_SCREEN_STATE_DONE = 5
+};
+
 struct emscripten_context_t EmscriptenContext;
 
 void EmscriptenMainLoop(void *arg);
+
+enum EMSCRIPTEN_SCREEN_STATE EmscriptenScreenState;
 
 #endif
