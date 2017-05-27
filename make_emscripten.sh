@@ -3,13 +3,7 @@
 rm -rf emscripten/*
 mkdir -p emscripten
 
-# ln -s data emscripten/files/data
-# ln -s doc emscripten/files/doc
-# ln -s dogfights emscripten/files/dogfights
-# ln -s graphics emscripten/files/graphics
-# ln -s missions emscripten/files/missions
-# ln -s music emscripten/files/music
-# ln -s sounds emscripten/files/sounds
+cmake .
 
 emcc -D "PB_FIELD_16BIT=1" \
     -Isrc/ \
@@ -36,7 +30,3 @@ emcc -D "PB_FIELD_16BIT=1" \
     --preload-file sounds \
     -o emscripten/index.html
 
-# for i in emscripten/files/*; do
-#     unlink "$i"
-# done
-# rmdir emscripten/files
