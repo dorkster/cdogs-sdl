@@ -98,16 +98,11 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
-struct context {
-    GameMode lastGameMode;
-    bool wasClient;
-    credits_displayer_t *creditsDisplayer;
-    custom_campaigns_t *campaigns;
-};
+#include "emscripten_loop.h"
 
 void EmscriptenMainLoop(void *arg)
 {
-    struct context *ctx = arg;
+    struct emscripten_context_t *ctx = arg;
 
     GrafxMakeRandomBackground(
         &gGraphicsDevice, &gCampaign, &gMission, &gMap);
@@ -133,14 +128,13 @@ void MainLoop(credits_displayer_t *creditsDisplayer, custom_campaigns_t *campaig
 	bool wasClient = false;
 
 #ifdef __EMSCRIPTEN__
-    struct context ctx;
-    ctx.lastGameMode = lastGameMode;
-    ctx.wasClient = wasClient;
-    ctx.creditsDisplayer = creditsDisplayer;
-    ctx.campaigns = campaigns;
+    EmscriptenContext.lastGameMode = lastGameMode;
+    EmscriptenContext.wasClient = wasClient;
+    EmscriptenContext.creditsDisplayer = creditsDisplayer;
+    EmscriptenContext.campaigns = campaigns;
 
-    // TODO use GameLoopData->FPS instead of 60?
-    emscripten_set_main_loop_arg(EmscriptenMainLoop, &ctx, 60, 1);
+    // TODO use GameLoopData->FPS instead of 30?
+    emscripten_set_main_loop_arg(EmscriptenMainLoop, &EmscriptenContext, 30, 1);
     return;
 #endif
 

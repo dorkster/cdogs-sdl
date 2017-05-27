@@ -38,6 +38,7 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
+#include "emscripten_loop.h"
 #endif
 
 GameLoopData GameLoopDataNew(
@@ -55,8 +56,10 @@ GameLoopData GameLoopDataNew(
 }
 
 #ifdef __EMSCRIPTEN__
-void GameLoop(GameLoopData *data)
+void EmscriptenGameDataLoop(void *arg)
 {
+    GameLoopData *data = (GameLoopData *)arg;
+
 	EventReset(
 		&gEventHandlers,
 		gEventHandlers.mouse.cursor, gEventHandlers.mouse.trail);
@@ -91,6 +94,9 @@ void GameLoop(GameLoopData *data)
         break;
     case UPDATE_RESULT_EXIT:
         // Will exit
+        emscripten_cancel_main_loop();
+        emscripten_set_main_loop_arg(EmscriptenMainLoop, &EmscriptenContext, 30, 1);
+        return;
         break;
     default:
         CASSERT(false, "Unknown loop result");
@@ -108,7 +114,8 @@ void GameLoop(GameLoopData *data)
         data->HasDrawnFirst = true;
     }
 }
-#else
+#endif //__EMSCRIPTEN__
+
 void GameLoop(GameLoopData *data)
 {
 	EventReset(
@@ -119,6 +126,12 @@ void GameLoop(GameLoopData *data)
 	Uint32 ticksElapsed = 0;
 	int framesSkipped = 0;
 	const int maxFrameskip = data->FPS / 5;
+
+#ifdef __EMSCRIPTEN__
+    emscripten_cancel_main_loop();
+    emscripten_set_main_loop_arg(EmscriptenGameDataLoop, data, 30, 1);
+    return;
+#endif
 
 	for (; result != UPDATE_RESULT_EXIT; )
 	{
@@ -195,4 +208,3 @@ void GameLoop(GameLoopData *data)
 		}
 	}
 }
-#endif //__EMSCRIPTEN__
